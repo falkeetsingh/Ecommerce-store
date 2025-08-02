@@ -76,8 +76,8 @@ const loginUser = async(req,res)=>{
         //setting cookie
         const cookieOptions = {
           httpOnly: true,
-          // secure: true, // use only on production HTTPS
-          sameSite: 'Lax',
+          secure: true, // use only on production HTTPS
+          sameSite: 'None',
         };
 
         if (rememberMe) {

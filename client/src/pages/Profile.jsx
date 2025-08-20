@@ -3,6 +3,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import axiosInstance from '../services/axiosInstance';
 import { fetchCurrentUser } from '../features/auth/authSlice';
 import { FaUserCircle } from 'react-icons/fa';
+import { toast } from 'react-toastify';
+
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -14,10 +16,8 @@ const Profile = () => {
   const [email, setEmail] = useState(user?.email || '');
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [preview, setPreview] = useState(user?.profilePhoto ? (user.profilePhoto.startsWith('http') ? user.profilePhoto : BACKEND_URL + user.profilePhoto) : "" );
-  const [success, setSuccess] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [passwordMsg, setPasswordMsg] = useState('');
 
   useEffect(() => {
     setName(user?.name || '');
@@ -42,29 +42,28 @@ const Profile = () => {
       await axiosInstance.put('/api/user/profile', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      setSuccess(true);
       dispatch(fetchCurrentUser());
-      setTimeout(() => setSuccess(false), 1500);
+      toast.success('Profile updated successfully!');
     } catch {
-      setSuccess(false);
-      alert('Failed to update profile');
+      toast.error('Failed to update profile');
     }
+
   };
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    setPasswordMsg('');
     try {
       const res = await axiosInstance.put('/api/auth/user_change_password', {
         currentPassword,
         newPassword,
       });
-      setPasswordMsg(res.data.message || 'Password updated!');
+      toast.success(res.data.message || 'Password updated!');
       setCurrentPassword('');
       setNewPassword('');
     } catch (err) {
-      setPasswordMsg(err.response?.data?.message || 'Failed to update password');
+      toast.error(err.response?.data?.message || 'Failed to update password');
     }
+
   };
 
   return (
@@ -107,7 +106,7 @@ const Profile = () => {
         >
           Update Profile
         </button>
-        {success && <div className="text-green-600 text-center font-medium">Profile updated!</div>}
+
       </form>
 
       <form onSubmit={handleChangePassword} className="space-y-5 mt-10 border-t border-slate-300 pt-6">
@@ -134,9 +133,6 @@ const Profile = () => {
         >
           Change Password
         </button>
-        {passwordMsg && (
-          <div className="text-center font-medium text-green-600">{passwordMsg}</div>
-        )}
       </form>
     </div>
   );

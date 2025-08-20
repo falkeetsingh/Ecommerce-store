@@ -1,4 +1,5 @@
 const Product = require('../models/product');
+const { deleteFromCloudinary } = require('../config/cloudinary');
 
 // Get all products
 exports.getAllProducts = async (req, res) => {
@@ -43,32 +44,89 @@ exports.getProductById = async (req, res) => {
   }
 };
 
-//add product
+// Add product with Cloudinary
 exports.addProduct = async (req, res) => {
   try {
     let { name, price, description, category, stock } = req.body;
+    
     // Ensure price and stock are numbers
     price = Number(price);
     stock = stock !== undefined ? Number(stock) : 0;
-    const mainImage = req.files['mainImage'] ? `/uploads/Products/${req.files['mainImage'][0].filename}` : '';
-    const gallery = req.files['gallery'] ? req.files['gallery'].map(f => `/uploads/Products/${f.filename}`) : [];
-    const product = await Product.create({ name, price, description, category, stock, mainImage, gallery });
+
+    // Get image URLs from Cloudinary upload
+    const mainImage = req.files && req.files['mainImage'] ? 
+      req.files['mainImage'][0].path : '';
+    
+    const gallery = req.files && req.files['gallery'] ? 
+      req.files['gallery'].map(file => file.path) : [];
+
+    // Store image metadata for easier management
+    const mainImageData = req.files && req.files['mainImage'] ? {
+      url: req.files['mainImage'][0].path,
+      publicId: req.files['mainImage'][0].public_id
+    } : null;
+
+    const galleryData = req.files && req.files['gallery'] ? 
+      req.files['gallery'].map(file => ({
+        url: file.path,
+        publicId: file.public_id
+      })) : [];
+
+    const product = await Product.create({ 
+      name, 
+      price, 
+      description, 
+      category, 
+      stock, 
+      mainImage,
+      gallery,
+      mainImageData,
+      galleryData
+    });
+
     res.status(201).json(product);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
-//delete product
+
+// Delete product with Cloudinary cleanup
 exports.deleteProduct = async (req, res) => {
   try {
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Delete images from Cloudinary
+    const deletePromises = [];
+    
+    if (product.mainImageData && product.mainImageData.publicId) {
+      deletePromises.push(deleteFromCloudinary(product.mainImageData.publicId));
+    }
+    
+    if (product.galleryData && product.galleryData.length > 0) {
+      product.galleryData.forEach(img => {
+        if (img.publicId) {
+          deletePromises.push(deleteFromCloudinary(img.publicId));
+        }
+      });
+    }
+
+    // Wait for all deletions to complete
+    await Promise.all(deletePromises);
+
+    // Delete product from database
     await Product.findByIdAndDelete(req.params.id);
-    res.status(200).json({ message: 'Product deleted' });
+    
+    res.status(200).json({ message: 'Product and images deleted successfully' });
   } catch (err) {
+    console.error('Error deleting product:', err);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
-// Edit product
+// Edit product with Cloudinary
 exports.editProduct = async (req, res) => {
   try {
     const { name, price, description, category, stock } = req.body;
@@ -76,15 +134,31 @@ exports.editProduct = async (req, res) => {
 
     // Handle main image update
     if (req.files && req.files['mainImage']) {
-      updateData.mainImage = `/uploads/Products/${req.files['mainImage'][0].filename}`;
+      const oldProduct = await Product.findById(req.params.id);
+      
+      // Delete old main image from Cloudinary if it exists
+      if (oldProduct.mainImageData && oldProduct.mainImageData.publicId) {
+        await deleteFromCloudinary(oldProduct.mainImageData.publicId);
+      }
+
+      updateData.mainImage = req.files['mainImage'][0].path;
+      updateData.mainImageData = {
+        url: req.files['mainImage'][0].path,
+        publicId: req.files['mainImage'][0].public_id
+      };
     }
 
     // Handle gallery update (append new images to existing gallery)
     if (req.files && req.files['gallery']) {
-      const newGallery = req.files['gallery'].map(f => `/uploads/Products/${f.filename}`);
-      // Fetch current gallery and append new images
       const product = await Product.findById(req.params.id);
-      updateData.gallery = product.gallery.concat(newGallery);
+      const newGallery = req.files['gallery'].map(file => file.path);
+      const newGalleryData = req.files['gallery'].map(file => ({
+        url: file.path,
+        publicId: file.public_id
+      }));
+
+      updateData.gallery = [...(product.gallery || []), ...newGallery];
+      updateData.galleryData = [...(product.galleryData || []), ...newGalleryData];
     }
 
     const updated = await Product.findByIdAndUpdate(req.params.id, updateData, { new: true });
@@ -94,20 +168,35 @@ exports.editProduct = async (req, res) => {
   }
 };
 
-//remove image from gallery
-
+// Remove image from gallery with Cloudinary cleanup
 exports.removeGalleryImage = async (req, res) => {
   try {
-    const { id } = req.params; // product id
-    const { imageUrl } = req.body; // image path to remove
+    const { id } = req.params;
+    const { imageUrl } = req.body;
 
     const product = await Product.findById(id);
     if (!product) return res.status(404).json({ message: 'Product not found' });
 
-    product.gallery = product.gallery.filter(img => img !== imageUrl);
+    // Find the image data to get public_id
+    const imageIndex = product.gallery.findIndex(img => img === imageUrl);
+    if (imageIndex === -1) {
+      return res.status(404).json({ message: 'Image not found in gallery' });
+    }
+
+    // Delete from Cloudinary
+    if (product.galleryData && product.galleryData[imageIndex] && product.galleryData[imageIndex].publicId) {
+      await deleteFromCloudinary(product.galleryData[imageIndex].publicId);
+    }
+
+    // Remove from database arrays
+    product.gallery.splice(imageIndex, 1);
+    if (product.galleryData) {
+      product.galleryData.splice(imageIndex, 1);
+    }
+
     await product.save();
 
-    res.json({ message: 'Image removed', gallery: product.gallery });
+    res.json({ message: 'Image removed successfully', gallery: product.gallery });
   } catch (err) {
     res.status(500).json({ message: 'Failed to remove image', error: err.message });
   }

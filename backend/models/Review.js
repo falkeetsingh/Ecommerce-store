@@ -1,26 +1,32 @@
 const mongoose = require('mongoose');
 
 const reviewSchema = new mongoose.Schema({
-    product:{
+    product: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Product',
         required: true,
     },
-    user:{
+    user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true,
     },
-    rating:{
+    rating: {
         type: Number,
         required: true,
+        min: 1,
+        max: 5
     },
-    text:{
+    text: {
         type: String,
     },
-    image:{
-        type: String
+    image: {
+        type: String  // Cloudinary URL
+    },
+    imageData: {
+        url: String,
+        publicId: String  // For deletion from Cloudinary
     }
-},{timestamps: true});
+}, { timestamps: true });
 
-module.exports = mongoose.model('Review',reviewSchema);
+module.exports = mongoose.model('Review', reviewSchema);

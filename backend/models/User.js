@@ -27,7 +27,11 @@ const userSchema = new mongoose.Schema({
     },
     profilePhoto: { 
         type: String, 
-        default: '' 
+        default: '' // Cloudinary URL
+    },
+    profilePhotoData: {
+        url: String,
+        publicId: String  // For deletion from Cloudinary
     },
     isAdmin: {
         type: Boolean,
@@ -50,7 +54,13 @@ const userSchema = new mongoose.Schema({
     },
     lockUntil: {
         type: Date
-    }
+    },
+    verified: { type: Boolean, default: false },
+    verificationToken: String,
+    verificationExpires: Date,
+    validationScore: Number,
+    emailVerifiedAt: Date,
+    createdAt: { type: Date, default: Date.now }
 }, {
     timestamps: true
 });

@@ -34,11 +34,33 @@ const orderSchema = new mongoose.Schema({
         postalCode: { type: String, required: true },
         country: { type: String, required: true }
     },
+    // New payment fields
+    paymentMethod: {
+        type: String,
+        required: true,
+        enum: ['card', 'upi', 'netbanking', 'cod']
+    },
+    paymentStatus: {
+        type: String,
+        default: function() {
+            // Set default based on payment method
+            return this.paymentMethod === 'cod' ? 'pending' : 'pending';
+        },
+        enum: ['pending', 'completed', 'failed', 'refunded']
+    },
+    // Store only last 4 digits of card for reference (never store full details)
+    cardInfo: {
+        lastFourDigits: String,
+        cardType: String // visa, mastercard, etc.
+    },
+    // For future payment gateway integration
+    paymentTransactionId: String,
     status: { 
         type: String, 
-        default: 'pending' //delivered, pending, shipped, cancelled
+        default: 'pending' // pending, confirmed, shipped, delivered, cancelled
     },                                                      
-    createdAt: { type: Date, 
+    createdAt: { 
+        type: Date, 
         default: Date.now 
     }
 });

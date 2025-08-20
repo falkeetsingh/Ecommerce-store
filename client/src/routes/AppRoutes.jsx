@@ -12,6 +12,7 @@ import OrderHistory from '../pages/OrderHistory';
 import Profile from '../pages/Profile';
 import Wishlist from '../pages/Wishlist';
 import ProtectedRoute from '../components/ProtectedRoute';
+import VerifyEmail from '../components/VerifyEmail';
 
 const AppRoutes = () => {
   return (
@@ -47,6 +48,7 @@ const AppRoutes = () => {
             <Profile />
           </ProtectedRoute>} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path='/verify-email' element={<VerifyEmail/>}/>
       </Routes>
     </>
   );

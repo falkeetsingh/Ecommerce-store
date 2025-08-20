@@ -30,9 +30,9 @@ export const addToCart = createAsyncThunk(
 // Place order
 export const placeOrder = createAsyncThunk(
   'cart/placeOrder',
-  async ({ address }, { rejectWithValue }) => {
+  async (orderData, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.post('/api/orders', { address });
+      const response = await axiosInstance.post('/api/orders', orderData);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to place order');
@@ -66,31 +66,43 @@ export const updateCartItem = createAsyncThunk(
   }
 );
 
-
 const cartSlice = createSlice({
   name: 'cart',
   initialState: {
     items: [],
     loading: false,
     error: null,
-    orderSuccess: false,  // Track order placement success
+    orderSuccess: false,
+    lastOrder: null,
   },
-  reducers: {},
+  reducers: {
+    // Add the clearOrderSuccess reducer
+    clearOrderSuccess: (state) => {
+      state.orderSuccess = false;
+      state.lastOrder = null;
+      state.error = null;
+    },
+    // Clear error
+    clearError: (state) => {
+      state.error = null;
+    },
+  },
   extraReducers: (builder) => {
     builder
       // Fetch Cart
       .addCase(fetchCart.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.orderSuccess = false;
       })
       .addCase(fetchCart.fulfilled, (state, action) => {
         state.loading = false;
         state.items = action.payload.items || [];
+        state.error = null;
       })
       .addCase(fetchCart.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        console.error('Cart fetch failed:', action.payload);
       })
 
       // Add to Cart
@@ -113,16 +125,21 @@ const cartSlice = createSlice({
         state.error = null;
         state.orderSuccess = false;
       })
-      .addCase(placeOrder.fulfilled, (state) => {
+      .addCase(placeOrder.fulfilled, (state, action) => {
         state.loading = false;
-        state.items = [];  // Clear cart after successful order
         state.orderSuccess = true;
+        state.lastOrder = action.payload.order;
+        // Only clear cart items on successful order
+        state.items = [];
+        state.error = null;
       })
       .addCase(placeOrder.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
         state.orderSuccess = false;
+        // Don't clear cart items on error
       })
+
       // Remove from Cart
       .addCase(removeFromCart.pending, (state) => {
         state.loading = true;
@@ -156,9 +173,11 @@ const cartSlice = createSlice({
       .addCase(updateCartItem.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-      })
-
+      });
   },
 });
+
+// Export actions
+export const { clearOrderSuccess, clearError } = cartSlice.actions;
 
 export default cartSlice.reducer;

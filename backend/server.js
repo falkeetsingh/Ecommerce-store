@@ -39,15 +39,17 @@ app.use(cookieParser());
 app.use(cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS','PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 //connect to database
 connectDB();
 
-// Serve static files from uploads
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+require('./config/cloudinary');
+
+// // Serve static files from uploads
+// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 //routes
 app.use('/api/auth', authRoutes);

@@ -1,10 +1,19 @@
 const express = require('express');
 const router = express.Router();
-const { addReview, getProductReviews } = require('../controllers/reviewController');
+const { addReview, getProductReviews, deleteReview, updateReview } = require('../controllers/reviewController');
 const auth = require('../middleware/auth');
-const upload = require('../middleware/upload');
+const { reviewUpload } = require('../config/cloudinary');
 
-router.post('/', auth, upload.single('reviewImage'), addReview);
+// Add review with optional image
+router.post('/', auth, reviewUpload.single('reviewImage'), addReview);
+
+// Get all reviews for a product
 router.get('/:productId', getProductReviews);
+
+// Delete review (user can delete their own, admin can delete any)
+router.delete('/:id', auth, deleteReview);
+
+// Update review with optional image update
+router.put('/:id', auth, reviewUpload.single('reviewImage'), updateReview);
 
 module.exports = router;

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../services/axiosInstance';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const AddProduct = () => {
   const [formData, setFormData] = useState({
@@ -13,7 +15,6 @@ const AddProduct = () => {
   const [mainImage, setMainImage] = useState(null);
   const [gallery, setGallery] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
 
   const handleInputChange = (e) => {
@@ -28,7 +29,7 @@ const AddProduct = () => {
     e.preventDefault();
     
     if (!formData.name || !formData.price) {
-      alert('Please fill in all required fields');
+      toast.error('Please fill in all required fields');
       return;
     }
 
@@ -52,14 +53,14 @@ const AddProduct = () => {
       await axiosInstance.post('/api/products', formDataToSend, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      setSuccess(true);
+      toast.success('Product added successfully!');
       setTimeout(() => {
         navigate('/admin/dashboard/products');
       }, 1500);
     } catch (error) {
       console.error('Failed to add product:', error);
-      alert('Failed to add product');
-    } finally {
+      toast.error('Failed to add product');
+    }finally {
       setLoading(false);
     }
   };
@@ -204,12 +205,6 @@ const AddProduct = () => {
               {loading ? 'Adding Product...' : 'Add Product'}
             </button>
           </div>
-
-          {success && (
-            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-              Product added successfully! Redirecting...
-            </div>
-          )}
         </form>
       </div>
     </div>

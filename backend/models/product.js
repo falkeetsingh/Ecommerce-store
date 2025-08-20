@@ -13,10 +13,18 @@ const productSchema = new mongoose.Schema({
         required: true 
     },
     mainImage: { 
-        type: String 
-    }, 
+        type: String  // Cloudinary URL
+    },
+    mainImageData: {
+        url: String,
+        publicId: String  // For deletion from Cloudinary
+    },
     gallery: [{
-        type: String 
+        type: String  // Array of Cloudinary URLs
+    }],
+    galleryData: [{
+        url: String,
+        publicId: String  // For deletion from Cloudinary
     }],
     category: { 
         type: String 
